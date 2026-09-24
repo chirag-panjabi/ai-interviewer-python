@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live Technical Screen | Alex & Candidate</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            zinc: {
+              950: '#09090b',
+              900: '#18181b',
+              800: '#27272a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #09090b;
+      color: #fafafa;
+      overflow: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(60% 50% at 20% 0%, rgba(139, 92, 246, 0.16), transparent 70%),
+        radial-gradient(50% 50% at 90% 10%, rgba(16, 185, 129, 0.11), transparent 70%),
+        radial-gradient(60% 60% at 50% 100%, rgba(99, 102, 241, 0.08), transparent 70%);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="h-screen flex flex-col font-sans select-none antialiased">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Header Bar -->
+  <header class="border-b border-white/10 bg-zinc-950/70 backdrop-blur-xl h-16 px-6 flex items-center justify-between z-30">
+    <div class="flex items-center gap-4">
+      <a href="/" class="p-2 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+      </a>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-white text-sm">Alex • Principal Interviewer</span>
+          <span id="target-repo-badge" class="px-2 py-0.5 rounded text-[11px] font-mono bg-violet-500/10 text-violet-400 border border-violet-500/20">
+            Probing Codebase
+          </span>
+        </div>
+        <p class="text-[11px] text-zinc-400">Live Voice Technical Screen (Gemini 3.8 Live)</p>
+      </div>
+    </div>
+
+    <!-- Timer and End Call -->
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-900 border border-white/10">
+        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span id="session-timer" class="font-mono text-xs font-semibold text-zinc-200">00:00</span>
+      </div>
+      <button 
+        id="end-call-btn" 
+        class="px-3.5 py-1.5 rounded-lg bg-rose-600/90 hover:bg-rose-500 text-white font-medium text-xs transition-all shadow-md flex items-center gap-1.5"
+      >
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2M5 3a2 2 0 00-2 2v1c0 8.284 6.716 15 15 15h1a2 2 0 002-2v-3.28a1 1 0 00-.684-.948l-4.493-1.498a1 1 0 00-1.21.502l-1.13 2.257a11.042 11.042 0 01-5.516-5.517l2.257-1.128a1 1 0 00.502-1.21L9.228 3.684A1 1 0 008.279 3H5z" />
+        </svg>
+        <span>End Call</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Live Voice Stage -->
+  <main class="flex-1 flex flex-col items-center justify-between p-6 relative overflow-hidden">
+
+    <!-- Center Stage: Voice Orbs matching original VoiceOrb.tsx -->
+    <div class="flex-1 w-full max-w-3xl flex items-center justify-around z-10 py-6">
+      
+      <!-- Interviewer Voice Orb (Alex - Violet Accent) -->
+      <div class="flex flex-col items-center gap-4">
+        <div class="relative w-48 h-48 sm:w-56 sm:h-56 grid place-items-center">
+          <!-- Outer Reactive Ring -->
+          <div id="alex-orb-outer" class="absolute inset-0 rounded-full border border-violet-400/30 transition-all duration-150 transform scale-100 opacity-30"></div>
+          <!-- Secondary Ring -->
+          <div id="alex-orb-mid" class="absolute w-36 h-36 sm:w-44 sm:h-44 rounded-full border border-violet-400/40 transition-all duration-150 transform scale-100 opacity-40"></div>
+          <!-- Core Orb -->
+          <div id="alex-orb-inner" class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-violet-400 to-indigo-600 grid place-items-center text-white shadow-2xl transition-transform duration-100" style="box-shadow: 0 0 25px rgba(139, 92, 246, 0.45);">
+            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- 5-bar animated equalizer -->
+        <div class="flex h-6 items-end gap-1" id="alex-equalizer">
+          <span class="w-1.5 rounded-full bg-violet-400 h-1.5 transition-all duration-100 opacity-40" data-weight="0.6"></span>
+          <span class="w-1.5 rounded-full bg-violet-400 h-1.5 transition-all duration-100 opacity-40" data-weight="0.85"></span>
+          <span class="w-1.5 rounded-full bg-violet-400 h-1.5 transition-all duration-100 opacity-40" data-weight="1.0"></span>
+          <span class="w-1.5 rounded-full bg-violet-400 h-1.5 transition-all duration-100 opacity-40" data-weight="0.7"></span>
+          <span class="w-1.5 rounded-full bg-violet-400 h-1.5 transition-all duration-100 opacity-40" data-weight="0.45"></span>
+        </div>
+
+        <div class="text-center">
+          <span class="text-xs font-bold text-white tracking-wide uppercase">Alex</span>
+          <span id="alex-status" class="block text-[11px] text-violet-300/80 mt-0.5">Connecting...</span>
+        </div>
+      </div>
+
+      <!-- Flow Divider -->
+      <div class="hidden sm:flex flex-col items-center text-zinc-600 font-mono text-[10px]">
+        <div class="w-px h-10 bg-zinc-800"></div>
+        <span class="py-2 tracking-widest">BIDI LIVE</span>
+        <div class="w-px h-10 bg-zinc-800"></div>
+      </div>
+
+      <!-- Candidate Voice Orb (You - Emerald Accent) -->
+      <div class="flex flex-col items-center gap-4">
+        <div class="relative w-48 h-48 sm:w-56 sm:h-56 grid place-items-center">
+          <!-- Outer Reactive Ring -->
+          <div id="user-orb-outer" class="absolute inset-0 rounded-full border border-emerald-400/30 transition-all duration-150 transform scale-100 opacity-30"></div>
+          <!-- Secondary Ring -->
+          <div id="user-orb-mid" class="absolute w-36 h-36 sm:w-44 sm:h-44 rounded-full border border-emerald-400/40 transition-all duration-150 transform scale-100 opacity-40"></div>
+          <!-- Core Orb -->
+          <div id="user-orb-inner" class="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-emerald-300 to-teal-600 grid place-items-center text-white shadow-2xl transition-transform duration-100" style="box-shadow: 0 0 25px rgba(16, 185, 129, 0.45);">
+            <svg class="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+        </div>
+
+        <!-- 5-bar animated equalizer -->
+        <div class="flex h-6 items-end gap-1" id="user-equalizer">
+          <span class="w-1.5 rounded-full bg-emerald-400 h-1.5 transition-all duration-100 opacity-40" data-weight="0.6"></span>
+          <span class="w-1.5 rounded-full bg-emerald-400 h-1.5 transition-all duration-100 opacity-40" data-weight="0.85"></span>
+          <span class="w-1.5 rounded-full bg-emerald-400 h-1.5 transition-all duration-100 opacity-40" data-weight="1.0"></span>
+          <span class="w-1.5 rounded-full bg-emerald-400 h-1.5 transition-all duration-100 opacity-40" data-weight="0.7"></span>
+          <span class="w-1.5 rounded-full bg-emerald-400 h-1.5 transition-all duration-100 opacity-40" data-weight="0.45"></span>
+        </div>
+
+        <div class="text-center">
+          <span id="candidate-orb-label" class="text-xs font-bold text-white tracking-wide uppercase">You</span>
+          <span id="user-status" class="block text-[11px] text-emerald-300/80 mt-0.5">Microphone Ready</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Subtitles Stream -->
+    <div class="w-full max-w-xl bg-zinc-900/60 border border-white/10 rounded-2xl p-4 shadow-xl backdrop-blur-xl mb-4 z-20">
+      <div class="flex items-center justify-between border-b border-white/10 pb-2 mb-2">
+        <div class="flex items-center gap-2">
+          <span class="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse"></span>
+          <span class="text-[11px] font-mono font-semibold uppercase tracking-wider text-zinc-400">Live Captions</span>
+        </div>
+        <span id="speaker-indicator" class="text-[11px] text-zinc-500 font-mono">Listening...</span>
+      </div>
+      <div id="transcript-stream" class="h-24 overflow-y-auto custom-scrollbar flex flex-col gap-1.5 text-xs">
+        <div class="text-[11px] text-zinc-500 italic">Conversation transcript will stream here in real-time...</div>
+      </div>
+    </div>
+
+    <!-- Floating Dock Controls -->
+    <div class="w-full max-w-sm bg-zinc-900/80 border border-white/10 rounded-2xl px-6 py-2.5 shadow-2xl backdrop-blur-xl flex items-center justify-around z-20">
+      <!-- Mic Mute Toggle -->
+      <button id="mic-toggle-btn" class="flex flex-col items-center gap-1 text-zinc-300 hover:text-white transition-colors">
+        <div id="mic-icon-wrapper" class="w-9 h-9 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors">
+          <svg id="mic-icon" class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+          </svg>
+        </div>
+        <span id="mic-label" class="text-[10px] font-medium">Mute Mic</span>
+      </button>
+
+      <!-- Speaker Toggle -->
+      <button id="speaker-toggle-btn" class="flex flex-col items-center gap-1 text-zinc-300 hover:text-white transition-colors">
+        <div id="speaker-icon-wrapper" class="w-9 h-9 rounded-full bg-zinc-800 hover:bg-zinc-700 flex items-center justify-center transition-colors">
+          <svg id="speaker-icon" class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          </svg>
+        </div>
+        <span id="speaker-label" class="text-[10px] font-medium">Speaker On</span>
+      </button>
+
+      <!-- Barge-in indicator -->
+      <div class="flex flex-col items-center gap-1 text-zinc-400">
+        <div class="w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center">
+          <span class="text-xs font-mono text-cyan-400">⚡</span>
+        </div>
+        <span class="text-[10px] font-medium">Barge-in On</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- Evaluation Synthesis Overlay -->
+  <div id="eval-overlay" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md hidden flex flex-col items-center justify-center p-6 text-center">
+    <div class="w-12 h-12 border-3 border-violet-500 border-t-transparent rounded-full animate-spin mb-5"></div>
+    <h2 class="text-xl font-bold text-white mb-2">Hiring Committee Evaluation in Progress</h2>
+    <p class="text-xs text-zinc-400 max-w-sm leading-relaxed">
+      Gemini 3.5 Flash Lite is evaluating your transcript across Technical Accuracy, Systems Depth, Problem Solving, and Spoken Communication...
+    </p>
+  </div>
+
+  <script type="module">
+    import { LiveAudioPlayer, LiveMicrophoneRecorder } from '/static/js/audio.js';
+    import { getStoredApiKey, showToast, endInterview } from '/static/js/app.js';
+
+    const pathParts = window.location.pathname.split('/');
+    const interviewId = pathParts[pathParts.length - 1];
+
+    if (!interviewId) {
+      window.location.href = '/';
+    }
+
+    let audioPlayer = new LiveAudioPlayer();
+    let micRecorder = null;
+    let ws = null;
+    let sessionSeconds = 0;
+    let timerInterval = null;
+
+    let isMicMuted = false;
+    let isSpeakerMuted = false;
+
+    // Elements
+    const alexOrbInner = document.getElementById('alex-orb-inner');
+    const alexOrbMid = document.getElementById('alex-orb-mid');
+    const alexOrbOuter = document.getElementById('alex-orb-outer');
+    const userOrbInner = document.getElementById('user-orb-inner');
+    const userOrbMid = document.getElementById('user-orb-mid');
+    const userOrbOuter = document.getElementById('user-orb-outer');
+    const alexEqualizerBars = document.querySelectorAll('#alex-equalizer span');
+    const userEqualizerBars = document.querySelectorAll('#user-equalizer span');
+
+    const alexStatus = document.getElementById('alex-status');
+    const userStatus = document.getElementById('user-status');
+    const transcriptStream = document.getElementById('transcript-stream');
+    const speakerIndicator = document.getElementById('speaker-indicator');
+    const sessionTimer = document.getElementById('session-timer');
+    const micToggleBtn = document.getElementById('mic-toggle-btn');
+    const micIconWrapper = document.getElementById('mic-icon-wrapper');
+    const micLabel = document.getElementById('mic-label');
+    const speakerToggleBtn = document.getElementById('speaker-toggle-btn');
+    const speakerLabel = document.getElementById('speaker-label');
+    const endCallBtn = document.getElementById('end-call-btn');
+    const evalOverlay = document.getElementById('eval-overlay');
+    const targetRepoBadge = document.getElementById('target-repo-badge');
+
+    async function loadMetadata() {
+      try {
+        const resp = await fetch(`/api/interview/${interviewId}`);
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.selectedRepo) {
+            targetRepoBadge.textContent = `Probed: ${data.selectedRepo}`;
+          } else {
+            targetRepoBadge.textContent = "General Technical Screen";
+          }
+          if (data.metadata?.name) {
+            document.getElementById('candidate-orb-label').textContent = data.metadata.name.split(' ')[0];
+          }
+        }
+      } catch (e) {}
+    }
+    loadMetadata();
+
+    function startTimer() {
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        sessionSeconds++;
+        const mins = String(Math.floor(sessionSeconds / 60)).padStart(2, '0');
+        const secs = String(sessionSeconds % 60).padStart(2, '0');
+        sessionTimer.textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    // VoiceOrb & 5-Bar Equalizer Animation Loop
+    function animateOrbs() {
+      const alexVol = audioPlayer.getVolumeLevel();
+      const userVol = micRecorder ? micRecorder.getVolumeLevel() : 0;
+
+      // Alex Orb (Violet)
+      const alexScale = 1.0 + (alexVol * 0.35);
+      const alexGlow = 20 + (alexVol * 80);
+      alexOrbInner.style.transform = `scale(${alexScale})`;
+      alexOrbInner.style.boxShadow = `0 0 ${alexGlow}px rgba(139, 92, 246, ${0.35 + alexVol * 0.5})`;
+      alexOrbMid.style.transform = `scale(${1.0 + alexVol * 0.18})`;
+      alexOrbMid.style.opacity = `${0.35 + alexVol * 0.5}`;
+      alexOrbOuter.style.transform = `scale(${1.0 + alexVol * 0.3})`;
+      alexOrbOuter.style.opacity = `${0.25 + alexVol * 0.5}`;
+
+      // Alex Equalizer Bars
+      alexEqualizerBars.forEach(bar => {
+        const weight = parseFloat(bar.getAttribute('data-weight') || '1.0');
+        const h = Math.max(4, Math.round(alexVol * weight * 24));
+        bar.style.height = `${h}px`;
+        bar.style.opacity = alexVol > 0.05 ? '1' : '0.25';
+      });
+
+      // User Orb (Emerald)
+      const userScale = 1.0 + (userVol * 0.35);
+      const userGlow = 20 + (userVol * 80);
+      userOrbInner.style.transform = `scale(${userScale})`;
+      userOrbInner.style.boxShadow = `0 0 ${userGlow}px rgba(16, 185, 129, ${0.35 + userVol * 0.5})`;
+      userOrbMid.style.transform = `scale(${1.0 + userVol * 0.18})`;
+      userOrbMid.style.opacity = `${0.35 + userVol * 0.5}`;
+      userOrbOuter.style.transform = `scale(${1.0 + userVol * 0.3})`;
+      userOrbOuter.style.opacity = `${0.25 + userVol * 0.5}`;
+
+      // User Equalizer Bars
+      userEqualizerBars.forEach(bar => {
+        const weight = parseFloat(bar.getAttribute('data-weight') || '1.0');
+        const h = Math.max(4, Math.round(userVol * weight * 24));
+        bar.style.height = `${h}px`;
+        bar.style.opacity = userVol > 0.05 ? '1' : '0.25';
+      });
+
+      requestAnimationFrame(animateOrbs);
+    }
+    requestAnimationFrame(animateOrbs);
+
+    function appendSubtitle(role, text) {
+      if (!text || !text.trim()) return;
+
+      const isAlex = role === 'assistant';
+      const color = isAlex ? 'text-violet-300' : 'text-emerald-300';
+      const name = isAlex ? 'Alex' : 'You';
+
+      const lastChild = transcriptStream.lastElementChild;
+      if (lastChild && lastChild.getAttribute('data-role') === role) {
+        const textSpan = lastChild.querySelector('.sub-text');
+        if (textSpan) {
+          textSpan.textContent += ` ${text.trim()}`;
+          transcriptStream.scrollTop = transcriptStream.scrollHeight;
+          return;
+        }
+      }
+
+      const row = document.createElement('div');
+      row.setAttribute('data-role', role);
+      row.className = 'flex items-start gap-2 py-0.5 leading-snug';
+      row.innerHTML = `
+        <span class="font-bold font-mono text-[10px] uppercase ${color} shrink-0">${name}:</span>
+        <span class="sub-text text-zinc-200 text-xs">${text.trim()}</span>
+      `;
+      transcriptStream.appendChild(row);
+      transcriptStream.scrollTop = transcriptStream.scrollHeight;
+    }
+
+    async function initSession() {
+      try {
+        audioPlayer.warmUp();
+
+        micRecorder = new LiveMicrophoneRecorder((base64Pcm) => {
+          if (ws && ws.readyState === WebSocket.OPEN && !isMicMuted) {
+            ws.send(JSON.stringify({
+              type: "audio",
+              pcm: base64Pcm,
+            }));
+          }
+        });
+
+        await micRecorder.start();
+        userStatus.textContent = "Microphone Live";
+
+        const key = getStoredApiKey();
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/api/live/${interviewId}${key ? `?key=${encodeURIComponent(key)}` : ''}`;
+
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          alexStatus.textContent = "Connecting Alex...";
+          startTimer();
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+
+            if (data.type === 'ready') {
+              alexStatus.textContent = "Alex is active";
+              speakerIndicator.textContent = "Alex is formulating question...";
+            }
+
+            else if (data.type === 'audio' && data.pcm) {
+              audioPlayer.enqueueChunk(data.pcm);
+              speakerIndicator.textContent = "Alex is speaking...";
+              alexStatus.textContent = "Speaking...";
+            }
+
+            else if (data.type === 'transcript') {
+              appendSubtitle(data.role, data.text);
+              if (data.role === 'assistant') {
+                speakerIndicator.textContent = "Alex is speaking...";
+              } else {
+                speakerIndicator.textContent = "You are speaking...";
+              }
+            }
+
+            else if (data.type === 'interrupt') {
+              audioPlayer.interrupt();
+              speakerIndicator.textContent = "Barge-in: Alex yielded turn";
+              alexStatus.textContent = "Listening to you...";
+            }
+
+            else if (data.type === 'turnComplete') {
+              speakerIndicator.textContent = "Your turn to speak";
+              alexStatus.textContent = "Listening...";
+            }
+
+            else if (data.type === 'error') {
+              showToast(data.message || "Session error", "error");
+              alexStatus.textContent = "Error";
+            }
+          } catch (e) {
+            console.error("WS Parse error:", e);
+          }
+        };
+
+        ws.onclose = () => {
+          alexStatus.textContent = "Session Ended";
+        };
+
+        ws.onerror = (err) => {
+          showToast("WebSocket connection failed", "error");
+          alexStatus.textContent = "Disconnected";
+        };
+
+      } catch (err) {
+        showToast(`Mic permission error: ${err.message}`, "error");
+        userStatus.textContent = "Mic Blocked";
+      }
+    }
+
+    micToggleBtn.addEventListener('click', () => {
+      isMicMuted = !isMicMuted;
+      if (micRecorder) micRecorder.setMute(isMicMuted);
+      if (isMicMuted) {
+        micIconWrapper.className = "w-9 h-9 rounded-full bg-rose-900/60 flex items-center justify-center transition-colors";
+        micLabel.textContent = "Unmute Mic";
+        userStatus.textContent = "Muted";
+      } else {
+        micIconWrapper.className = "w-9 h-9 rounded-full bg-zinc-800 flex items-center justify-center transition-colors";
+        micLabel.textContent = "Mute Mic";
+        userStatus.textContent = "Microphone Live";
+      }
+    });
+
+    speakerToggleBtn.addEventListener('click', () => {
+      isSpeakerMuted = !isSpeakerMuted;
+      audioPlayer.setMute(isSpeakerMuted);
+      speakerLabel.textContent = isSpeakerMuted ? "Speaker Muted" : "Speaker On";
+    });
+
+    endCallBtn.addEventListener('click', async () => {
+      if (!confirm("Are you ready to conclude this technical screen and generate your scorecard?")) {
+        return;
+      }
+
+      evalOverlay.classList.remove('hidden');
+
+      if (micRecorder) micRecorder.stop();
+      if (audioPlayer) audioPlayer.close();
+      if (timerInterval) clearInterval(timerInterval);
+
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: "end" }));
+        ws.close();
+      }
+
+      try {
+        const apiKey = getStoredApiKey();
+        await endInterview(interviewId, apiKey);
+        window.location.href = `/result/${interviewId}`;
+      } catch (err) {
+        showToast(`Evaluation note: ${err.message}`, "warning");
+        setTimeout(() => {
+          window.location.href = `/result/${interviewId}`;
+        }, 1500);
+      }
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initSession();
+    });
+  </script>
+</body>
+</html>

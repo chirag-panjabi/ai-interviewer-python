@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Technical Interviewer | Python Edition</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            zinc: {
+              950: '#09090b',
+              900: '#18181b',
+              800: '#27272a',
+              700: '#3f3f46',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #09090b;
+      color: #fafafa;
+      min-height: 100vh;
+    }
+    /* Soft ambient background glow matching the original design */
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(60% 50% at 20% 0%, rgba(139, 92, 246, 0.16), transparent 70%),
+        radial-gradient(50% 50% at 90% 10%, rgba(16, 185, 129, 0.11), transparent 70%),
+        radial-gradient(60% 60% at 50% 100%, rgba(99, 102, 241, 0.08), transparent 70%);
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: rgba(24, 24, 27, 0.5);
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #3f3f46;
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans selection:bg-violet-500 selection:text-white antialiased">
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Navigation Bar -->
+  <header class="border-b border-white/10 bg-zinc-950/70 backdrop-blur-xl sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+          <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+          </svg>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="font-bold tracking-tight text-white text-sm sm:text-base">AI Technical Interviewer</span>
+          <span class="text-[11px] px-2 py-0.5 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20 font-mono">Gemini 3.8 Live</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button id="key-modal-trigger" class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-white/10 hover:border-white/20 bg-zinc-900/80 hover:bg-zinc-800 text-xs font-medium text-zinc-300 transition-colors">
+          <span id="key-status-dot" class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="key-status-label">API Key: Ready</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero & Intake Studio -->
+  <main class="flex-1 max-w-3xl mx-auto px-6 py-12 w-full flex flex-col items-center">
+    
+    <!-- Hero Header -->
+    <div class="text-center max-w-xl mx-auto mb-10">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-xs font-mono mb-4">
+        <span>⚡ Powered by Google GenAI Live (ADK)</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
+        Live Technical Screening Grounded in Your Codebase
+      </h1>
+      <p class="mt-3 text-sm text-zinc-400 leading-relaxed">
+        Alex conducts a 12-minute technical screen in real-time spoken voice, probing your actual system architecture, concurrency mechanics, and failure modes.
+      </p>
+    </div>
+
+    <!-- Intake Card -->
+    <div class="w-full bg-zinc-900/50 border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
+
+      <!-- Step 1: GitHub Profile Input -->
+      <div class="mb-6">
+        <label for="github-username" class="block text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">
+          Candidate GitHub Profile
+        </label>
+        <div class="relative flex items-center">
+          <div class="absolute left-3.5 flex items-center pointer-events-none text-zinc-500">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+          </div>
+          <input 
+            type="text" 
+            id="github-username" 
+            placeholder="e.g. chirag-panjabi" 
+            class="w-full pl-11 pr-28 py-3 bg-zinc-950/80 border border-white/10 rounded-xl text-zinc-100 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-violet-500 text-sm font-sans transition-all"
+            value="chirag-panjabi"
+          />
+          <button 
+            id="fetch-btn" 
+            class="absolute right-2 px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-medium transition-colors border border-white/10 flex items-center gap-1.5"
+          >
+            <span>Scan Repos</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Profile Preview Banner -->
+      <div id="profile-preview-card" class="mb-6 p-4 rounded-xl bg-zinc-950/60 border border-white/10 flex items-center justify-between">
+        <div class="flex items-center gap-3.5 min-w-0">
+          <img id="avatar-img" src="https://github.com/chirag-panjabi.png" alt="Avatar" class="w-11 h-11 rounded-full border border-white/10 object-cover shrink-0" />
+          <div class="min-w-0">
+            <div class="flex items-center gap-2">
+              <span id="candidate-name" class="font-semibold text-white text-sm truncate">Chirag Panjabi</span>
+              <span id="candidate-login" class="text-xs text-zinc-400 font-mono">@chirag-panjabi</span>
+            </div>
+            <p id="candidate-bio" class="text-xs text-zinc-400 mt-0.5 truncate">Fullstack & Systems Engineer</p>
+          </div>
+        </div>
+        <span id="repo-count-badge" class="px-2.5 py-1 rounded-md bg-zinc-800/80 text-zinc-300 font-mono text-[11px] border border-white/10 shrink-0">
+          8 public repos
+        </span>
+      </div>
+
+      <!-- Step 2: Target Repository Selection -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between mb-3">
+          <label class="block text-xs font-semibold uppercase tracking-wider text-zinc-400">
+            Select Project Focus for Interview
+          </label>
+          <span class="text-xs text-zinc-500">Alex will anchor technical questions to this project</span>
+        </div>
+
+        <div id="repos-container" class="space-y-2.5 max-h-72 overflow-y-auto pr-1 custom-scrollbar">
+          <!-- Dynamically populated repo cards -->
+          <div class="p-6 text-center text-xs text-zinc-500 border border-dashed border-zinc-800 rounded-xl">
+            Scanning repositories...
+          </div>
+        </div>
+      </div>
+
+      <!-- Launch Button -->
+      <button 
+        id="start-interview-btn" 
+        class="w-full py-3.5 rounded-xl bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-sm shadow-lg shadow-violet-500/20 transition-all transform active:scale-[0.99] flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:pointer-events-none"
+      >
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>Enter Live Interview Room</span>
+      </button>
+
+      <!-- Trust Badges -->
+      <div class="mt-5 flex items-center justify-center gap-6 text-xs text-zinc-500">
+        <span class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          No video recording required
+        </span>
+        <span class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          Zero install SQLite
+        </span>
+        <span class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+          12-minute session
+        </span>
+      </div>
+    </div>
+  </main>
+
+  <!-- BYOK API Key Modal -->
+  <div id="key-modal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-zinc-900 border border-white/10 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+      <h3 class="text-base font-bold text-white mb-2">Google Gemini API Key</h3>
+      <p class="text-xs text-zinc-400 mb-4 leading-relaxed">
+        Your API key is used directly to establish the full-duplex live session with Gemini 3.8 Live. The server's pre-configured key is active by default.
+      </p>
+
+      <div class="mb-4">
+        <label class="block text-xs font-semibold text-zinc-300 uppercase tracking-wider mb-2">API Key</label>
+        <input 
+          type="password" 
+          id="modal-api-key-input" 
+          placeholder="AIzaSy..." 
+          class="w-full px-3.5 py-2.5 bg-zinc-950 border border-white/10 rounded-xl text-zinc-100 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-violet-500"
+        />
+      </div>
+
+      <div class="flex items-center justify-end gap-3">
+        <button id="close-modal-btn" class="px-4 py-2 rounded-xl text-zinc-400 hover:text-white text-xs font-semibold transition-colors">
+          Cancel
+        </button>
+        <button id="save-modal-btn" class="px-4 py-2 rounded-xl bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold transition-colors shadow-lg">
+          Save & Verify
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { getStoredApiKey, setStoredApiKey, showToast, verifyApiKey, fetchGithubPreview, createInterview } from '/static/js/app.js';
+
+    let currentRepos = [];
+    let selectedRepo = null;
+
+    const usernameInput = document.getElementById('github-username');
+    const fetchBtn = document.getElementById('fetch-btn');
+    const reposContainer = document.getElementById('repos-container');
+    const startBtn = document.getElementById('start-interview-btn');
+    const keyModal = document.getElementById('key-modal');
+    const keyModalTrigger = document.getElementById('key-modal-trigger');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const saveModalBtn = document.getElementById('save-modal-btn');
+    const modalKeyInput = document.getElementById('modal-api-key-input');
+    const keyStatusLabel = document.getElementById('key-status-label');
+    const keyStatusDot = document.getElementById('key-status-dot');
+
+    const languageColors = {
+      TypeScript: "bg-blue-500",
+      JavaScript: "bg-amber-400",
+      Python: "bg-emerald-500",
+      Go: "bg-cyan-500",
+      Rust: "bg-orange-500",
+      Java: "bg-red-500",
+      "C++": "bg-pink-500",
+      C: "bg-purple-500",
+      Ruby: "bg-rose-500",
+      PHP: "bg-indigo-500",
+      Swift: "bg-orange-600",
+      Kotlin: "bg-purple-600",
+    };
+
+    // Check Gemini API Key
+    async function checkKeyStatus() {
+      const stored = getStoredApiKey();
+      modalKeyInput.value = stored;
+      const res = await verifyApiKey(stored);
+      if (res.valid) {
+        keyStatusLabel.textContent = "API Key: Ready";
+        keyStatusDot.className = "w-2 h-2 rounded-full bg-emerald-500";
+      } else {
+        keyStatusLabel.textContent = "API Key: Setup Required";
+        keyStatusDot.className = "w-2 h-2 rounded-full bg-amber-500";
+      }
+    }
+
+    keyModalTrigger.addEventListener('click', () => keyModal.classList.remove('hidden'));
+    closeModalBtn.addEventListener('click', () => keyModal.classList.add('hidden'));
+
+    saveModalBtn.addEventListener('click', async () => {
+      const key = modalKeyInput.value.trim();
+      const res = await verifyApiKey(key);
+      if (res.valid) {
+        setStoredApiKey(key);
+        showToast("Gemini API Key verified and saved!", "success");
+        keyModal.classList.add('hidden');
+        checkKeyStatus();
+      } else {
+        showToast(res.message || "Invalid Gemini API Key", "error");
+      }
+    });
+
+    async function loadCandidateProfile(username) {
+      if (!username) return;
+      reposContainer.innerHTML = `
+        <div class="p-8 text-center text-xs text-zinc-400">
+          <div class="inline-block w-5 h-5 border-2 border-violet-500 border-t-transparent rounded-full animate-spin mb-2"></div>
+          <div>Fetching repositories and profile metadata...</div>
+        </div>
+      `;
+
+      try {
+        const data = await fetchGithubPreview(username);
+        document.getElementById('candidate-name').textContent = data.name || data.username;
+        document.getElementById('candidate-login').textContent = `@${data.username}`;
+        document.getElementById('candidate-bio').textContent = data.bio || "Software Engineer";
+        document.getElementById('avatar-img').src = data.avatarUrl || `https://github.com/${data.username}.png`;
+        document.getElementById('repo-count-badge').textContent = `${data.repos.length} public repos`;
+
+        currentRepos = data.repos || [];
+        renderRepos(currentRepos);
+      } catch (err) {
+        showToast(err.message, "error");
+        reposContainer.innerHTML = `
+          <div class="p-4 text-center text-xs text-rose-400 border border-rose-900/50 rounded-xl bg-rose-950/20">
+            Failed to fetch GitHub profile. Proceeding with general technical screen.
+          </div>
+        `;
+      }
+    }
+
+    function renderRepos(repos) {
+      if (!repos || repos.length === 0) {
+        reposContainer.innerHTML = `
+          <div class="p-4 text-center text-xs text-zinc-500 border border-white/10 rounded-xl bg-zinc-950/40">
+            No public repositories found. Alex will conduct a general systems design screen.
+          </div>
+        `;
+        selectedRepo = null;
+        return;
+      }
+
+      selectedRepo = repos[0]?.name || null;
+
+      reposContainer.innerHTML = repos.map((repo, idx) => {
+        const isSelected = idx === 0;
+        const langColor = languageColors[repo.language] || "bg-zinc-400";
+        return `
+          <div class="repo-card cursor-pointer p-3.5 rounded-xl border transition-all ${
+            isSelected 
+              ? 'bg-violet-950/25 border-violet-500/80 ring-1 ring-violet-500/50' 
+              : 'bg-zinc-950/50 border-white/10 hover:border-white/20'
+          }" data-repo="${repo.name}">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <input 
+                  type="radio" 
+                  name="target_repo" 
+                  value="${repo.name}" 
+                  ${isSelected ? 'checked' : ''} 
+                  class="text-violet-600 focus:ring-violet-500 border-zinc-700 bg-zinc-900"
+                />
+                <span class="font-semibold text-white text-xs tracking-tight truncate">${repo.name}</span>
+              </div>
+              <div class="flex items-center gap-2 shrink-0">
+                <span class="flex items-center gap-1 text-[11px] text-zinc-400">
+                  <span class="w-2 h-2 rounded-full ${langColor}"></span>
+                  ${repo.language || 'Code'}
+                </span>
+                <span class="text-[11px] text-zinc-500 font-mono">★ ${repo.stars || 0}</span>
+              </div>
+            </div>
+            ${repo.description ? `<p class="text-[11px] text-zinc-400 mt-1.5 line-clamp-1 pl-6 leading-relaxed">${repo.description}</p>` : ''}
+          </div>
+        `;
+      }).join('');
+
+      document.querySelectorAll('.repo-card').forEach(card => {
+        card.addEventListener('click', () => {
+          document.querySelectorAll('.repo-card').forEach(c => {
+            c.classList.remove('bg-violet-950/25', 'border-violet-500/80', 'ring-1', 'ring-violet-500/50');
+            c.classList.add('bg-zinc-950/50', 'border-white/10');
+          });
+          card.classList.add('bg-violet-950/25', 'border-violet-500/80', 'ring-1', 'ring-violet-500/50');
+          card.classList.remove('bg-zinc-950/50', 'border-white/10');
+          const radio = card.querySelector('input[type="radio"]');
+          if (radio) radio.checked = true;
+          selectedRepo = card.getAttribute('data-repo');
+        });
+      });
+    }
+
+    fetchBtn.addEventListener('click', () => {
+      loadCandidateProfile(usernameInput.value.trim());
+    });
+
+    usernameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        loadCandidateProfile(usernameInput.value.trim());
+      }
+    });
+
+    startBtn.addEventListener('click', async () => {
+      startBtn.disabled = true;
+      startBtn.innerHTML = `
+        <div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+        <span>Initializing Room...</span>
+      `;
+
+      try {
+        const username = usernameInput.value.trim() || "candidate";
+        const apiKey = getStoredApiKey();
+        const res = await createInterview(username, selectedRepo, apiKey);
+        
+        showToast("Room ready! Connecting to Alex...", "success");
+        setTimeout(() => {
+          window.location.href = `/interview/${res.interviewId}`;
+        }, 300);
+      } catch (err) {
+        showToast(err.message, "error");
+        startBtn.disabled = false;
+        startBtn.innerHTML = `<span>Enter Live Interview Room</span>`;
+      }
+    });
+
+    checkKeyStatus();
+    loadCandidateProfile("chirag-panjabi");
+  </script>
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Candidate Scorecard Dossier | AI Interviewer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            zinc: {
+              950: '#09090b',
+              900: '#18181b',
+              800: '#27272a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      background-color: #09090b;
+      color: #fafafa;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
+      background:
+        radial-gradient(60% 50% at 20% 0%, rgba(139, 92, 246, 0.16), transparent 70%),
+        radial-gradient(50% 50% at 90% 10%, rgba(16, 185, 129, 0.11), transparent 70%),
+        radial-gradient(60% 60% at 50% 100%, rgba(99, 102, 241, 0.08), transparent 70%);
+    }
+    @media print {
+      body {
+        background-color: white !important;
+        color: black !important;
+      }
+      body::before {
+        display: none !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- Header Bar -->
+  <header class="border-b border-white/10 bg-zinc-950/70 backdrop-blur-xl sticky top-0 z-40 no-print">
+    <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="/" class="flex items-center gap-2 text-zinc-300 hover:text-white transition-colors">
+          <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+            </svg>
+          </div>
+          <span class="font-bold text-sm tracking-tight text-white">AI Technical Interviewer</span>
+        </a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <button onclick="window.print()" class="px-3.5 py-1.5 rounded-lg border border-white/10 bg-zinc-900/80 hover:bg-zinc-800 text-xs font-semibold text-zinc-200 transition-colors flex items-center gap-1.5 shadow-sm">
+          <svg class="w-3.5 h-3.5 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+          <span>Export PDF</span>
+        </button>
+        <a href="/" class="px-3.5 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-xs font-semibold transition-colors shadow-md">
+          Start New Screen
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Dossier Main Content -->
+  <main class="flex-1 max-w-4xl mx-auto px-6 py-10 w-full">
+    
+    <!-- Candidate Overview Card -->
+    <div id="overview-card" class="bg-zinc-900/50 border border-white/10 rounded-2xl p-6 sm:p-8 shadow-2xl mb-8 backdrop-blur-xl relative">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-6 border-b border-white/10">
+        <div class="flex items-center gap-4">
+          <img id="cand-avatar" src="https://github.com/github.png" class="w-14 h-14 rounded-full border border-white/10 object-cover shadow-lg" />
+          <div>
+            <div class="flex items-center gap-3">
+              <h1 id="cand-name" class="text-xl font-bold text-white">Candidate</h1>
+              <span id="recommendation-badge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider bg-zinc-800 text-zinc-300 border border-white/10">
+                Evaluating...
+              </span>
+            </div>
+            <div class="flex items-center gap-3 mt-1 text-xs text-zinc-400">
+              <span id="cand-handle" class="font-mono text-violet-400">@candidate</span>
+              <span>•</span>
+              <span id="cand-repo-badge" class="px-2 py-0.5 rounded bg-zinc-800/80 text-zinc-300 font-mono text-[11px] border border-white/10">Repo: None</span>
+              <span>•</span>
+              <span id="interview-date" class="text-zinc-500">Date</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Overall Score Ring -->
+        <div class="flex items-center sm:flex-col sm:items-end justify-between bg-zinc-950/60 px-4 py-3 rounded-xl border border-white/10">
+          <span class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider">Overall Score</span>
+          <div class="flex items-baseline gap-1 mt-0.5">
+            <span id="overall-score-num" class="text-3xl font-extrabold text-violet-400 font-mono">--</span>
+            <span class="text-xs text-zinc-500 font-mono">/ 10.0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Executive Summary -->
+      <div class="mt-6">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-zinc-400 mb-2">Hiring Committee Executive Summary</h3>
+        <p id="executive-summary" class="text-zinc-300 text-xs sm:text-sm leading-relaxed">
+          Loading evaluation dossier...
+        </p>
+      </div>
+    </div>
+
+    <!-- 4 Pillar Breakdown Cards -->
+    <div class="mb-8">
+      <h2 class="text-sm font-bold text-white mb-4 flex items-center gap-2">
+        <span class="w-1.5 h-1.5 rounded-full bg-violet-500"></span>
+        Core Technical Competency Pillars
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="pillars-container">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Strengths & Improvement Opportunities -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <!-- Strengths -->
+      <div class="bg-zinc-900/50 border border-white/10 rounded-2xl p-5 shadow-xl">
+        <h3 class="text-xs font-bold text-emerald-400 flex items-center gap-2 mb-3 uppercase tracking-wider">
+          <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Key Technical Strengths
+        </h3>
+        <ul id="strengths-list" class="space-y-2 text-xs text-zinc-300">
+          <li class="italic text-zinc-500">Loading strengths...</li>
+        </ul>
+      </div>
+
+      <!-- Improvement Opportunities -->
+      <div class="bg-zinc-900/50 border border-white/10 rounded-2xl p-5 shadow-xl">
+        <h3 class="text-xs font-bold text-amber-400 flex items-center gap-2 mb-3 uppercase tracking-wider">
+          <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          Growth & Systems Depth Opportunities
+        </h3>
+        <ul id="improvements-list" class="space-y-2 text-xs text-zinc-300">
+          <li class="italic text-zinc-500">Loading growth areas...</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Candidate Quote Attribution & Direct Evidence -->
+    <div id="evidence-section" class="bg-zinc-900/50 border border-white/10 rounded-2xl p-5 shadow-xl mb-8">
+      <h3 class="text-xs font-bold text-cyan-400 flex items-center gap-2 mb-3 uppercase tracking-wider">
+        <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/></svg>
+        Evidence & Direct Spoken Citations
+      </h3>
+      <div id="evidence-container" class="space-y-2.5">
+        <div class="text-xs text-zinc-500 italic">No direct quotes recorded or evaluated.</div>
+      </div>
+    </div>
+
+    <!-- Complete Transcript Section -->
+    <div class="bg-zinc-900/50 border border-white/10 rounded-2xl p-5 shadow-xl no-print">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-bold text-white flex items-center gap-2 uppercase tracking-wider">
+          <svg class="w-4 h-4 text-violet-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          Complete Session Transcript
+        </h3>
+        <input 
+          type="text" 
+          id="transcript-search" 
+          placeholder="Filter conversation..." 
+          class="px-2.5 py-1 bg-zinc-950 border border-white/10 rounded-lg text-xs text-zinc-200 placeholder-zinc-500 focus:outline-none focus:ring-1 focus:ring-violet-500"
+        />
+      </div>
+
+      <div id="transcript-list" class="max-h-80 overflow-y-auto space-y-2.5 pr-2 custom-scrollbar text-xs">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+  </main>
+
+  <script type="module">
+    import { getResultData } from '/static/js/app.js';
+
+    const pathParts = window.location.pathname.split('/');
+    const interviewId = pathParts[pathParts.length - 1];
+
+    let allTranscript = [];
+
+    const recommendationColors = {
+      "Strong Hire": "bg-emerald-950/80 text-emerald-400 border-emerald-700/80",
+      "Hire": "bg-teal-950/80 text-teal-400 border-teal-700/80",
+      "Lean Hire": "bg-amber-950/80 text-amber-400 border-amber-700/80",
+      "No Hire": "bg-rose-950/80 text-rose-400 border-rose-700/80",
+    };
+
+    const pillarTitles = {
+      technicalAccuracy: "Technical Accuracy & Systems Correctness",
+      problemSolving: "Problem Solving & Trade-off Analysis",
+      communication: "Articulate Spoken Communication",
+      depth: "Systems Depth & Concurrency Internals",
+    };
+
+    async function loadScorecard() {
+      try {
+        const data = await getResultData(interviewId);
+        renderScorecard(data);
+      } catch (err) {
+        document.getElementById('executive-summary').textContent = `Failed to load scorecard: ${err.message}`;
+      }
+    }
+
+    function renderScorecard(data) {
+      const cand = data.candidate || {};
+      const evalData = data.evaluation || {};
+
+      document.getElementById('cand-name').textContent = cand.metadata?.name || cand.username || "Candidate";
+      document.getElementById('cand-handle').textContent = `@${cand.username || 'candidate'}`;
+      document.getElementById('cand-avatar').src = cand.metadata?.avatarUrl || `https://github.com/${cand.username}.png`;
+      document.getElementById('cand-repo-badge').textContent = `Target: ${cand.selectedRepo || 'General Screen'}`;
+      document.getElementById('interview-date').textContent = new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+
+      const score = evalData.overallScore !== undefined ? evalData.overallScore : (data.score ? (data.score / 10).toFixed(1) : "5.0");
+      document.getElementById('overall-score-num').textContent = typeof score === 'number' ? score.toFixed(1) : score;
+
+      const rec = evalData.recommendation || "Lean Hire";
+      const recBadge = document.getElementById('recommendation-badge');
+      recBadge.textContent = rec;
+      recBadge.className = `px-2.5 py-0.5 rounded-full text-[11px] font-bold uppercase tracking-wider border ${recommendationColors[rec] || recommendationColors["Lean Hire"]}`;
+
+      document.getElementById('executive-summary').textContent = evalData.summary || data.feedback || "Candidate engaged in active technical dialogue.";
+
+      const pillarsContainer = document.getElementById('pillars-container');
+      const categories = evalData.categories || {};
+      pillarsContainer.innerHTML = Object.entries(pillarTitles).map(([key, title]) => {
+        const cat = categories[key] || { score: 5, feedback: "Evaluation completed." };
+        const scoreVal = typeof cat.score === 'number' ? cat.score.toFixed(1) : cat.score;
+        const pct = Math.min(100, Math.max(0, (cat.score / 10) * 100));
+
+        return `
+          <div class="p-4 rounded-xl bg-zinc-950/60 border border-white/10 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-xs font-bold text-zinc-200">${title}</span>
+                <span class="text-xs font-extrabold font-mono text-violet-400">${scoreVal} / 10</span>
+              </div>
+              <div class="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden mb-2.5">
+                <div class="bg-gradient-to-r from-violet-500 to-indigo-500 h-full rounded-full" style="width: ${pct}%"></div>
+              </div>
+              <p class="text-[11px] text-zinc-400 leading-relaxed">${cat.feedback}</p>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      const strengthsList = document.getElementById('strengths-list');
+      const strengths = evalData.strengths || [];
+      if (strengths.length > 0) {
+        strengthsList.innerHTML = strengths.map(s => `
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-400 shrink-0">✓</span>
+            <span>${s}</span>
+          </li>
+        `).join('');
+      } else {
+        strengthsList.innerHTML = `<li class="text-zinc-500 italic">No specific strengths captured.</li>`;
+      }
+
+      const improvementsList = document.getElementById('improvements-list');
+      const improvements = evalData.improvements || [];
+      if (improvements.length > 0) {
+        improvementsList.innerHTML = improvements.map(imp => `
+          <li class="flex items-start gap-2">
+            <span class="text-amber-400 shrink-0">▲</span>
+            <span>${imp}</span>
+          </li>
+        `).join('');
+      } else {
+        improvementsList.innerHTML = `<li class="text-zinc-500 italic">No critical growth items detected.</li>`;
+      }
+
+      const evidenceContainer = document.getElementById('evidence-container');
+      const evidence = evalData.evidence || [];
+      if (evidence.length > 0) {
+        evidenceContainer.innerHTML = evidence.map(ev => `
+          <div class="p-3 rounded-xl bg-zinc-950/60 border border-white/10">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-mono font-semibold uppercase text-cyan-400">${ev.topic || 'Technical Topic'}</span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-zinc-800 text-zinc-300 font-mono">${ev.assessment || 'Observed'}</span>
+            </div>
+            <p class="text-[11px] text-zinc-200 italic font-mono border-l-2 border-cyan-500/60 pl-2.5 my-1.5">"${ev.quote}"</p>
+            <p class="text-[11px] text-zinc-400">${ev.context || ''}</p>
+          </div>
+        `).join('');
+      } else {
+        document.getElementById('evidence-section').classList.add('hidden');
+      }
+
+      allTranscript = data.transcript || [];
+      renderTranscript(allTranscript);
+    }
+
+    function renderTranscript(list) {
+      const container = document.getElementById('transcript-list');
+      if (!list || list.length === 0) {
+        container.innerHTML = `<div class="text-zinc-500 italic">No transcript recorded for this session.</div>`;
+        return;
+      }
+
+      container.innerHTML = list.map(item => {
+        const isAlex = item.sender === 'Assistant';
+        const color = isAlex ? 'text-violet-400 bg-violet-950/30' : 'text-emerald-400 bg-emerald-950/30';
+        return `
+          <div class="p-3 rounded-xl border border-white/5 bg-zinc-950/40">
+            <div class="flex items-center justify-between mb-1">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono uppercase ${color}">
+                ${isAlex ? 'Alex (Interviewer)' : 'Candidate'}
+              </span>
+              <span class="text-[10px] text-zinc-500 font-mono">${item.time || ''}</span>
+            </div>
+            <p class="text-zinc-300 text-xs leading-relaxed mt-1">${item.text}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    document.getElementById('transcript-search').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      if (!q) {
+        renderTranscript(allTranscript);
+      } else {
+        const filtered = allTranscript.filter(item => 
+          item.text.toLowerCase().includes(q) || item.sender.toLowerCase().includes(q)
+        );
+        renderTranscript(filtered);
+      }
+    });
+
+    loadScorecard();
+  </script>
+</body>
+</html>
