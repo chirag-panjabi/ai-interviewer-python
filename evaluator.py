@@ -130,12 +130,12 @@ TRANSCRIPT:
 """
 
     eval_model = os.getenv("GEMINI_EVAL_MODEL", "gemini-3.5-flash-lite")
-    models_to_try = [
+    models_to_try = list(dict.fromkeys([
         eval_model,
         "gemini-3.5-flash-lite",
-        "gemini-flash-latest",
-        "gemini-2.5-flash",
-    ]
+        "gemini-3.6-flash",
+        "gemini-3.5-flash",
+    ]))
 
     client = genai.Client(api_key=active_key, http_options={"api_version": "v1beta"})
 

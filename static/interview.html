@@ -338,6 +338,16 @@
         bar.style.opacity = userVol > 0.05 ? '1' : '0.25';
       });
 
+      if (!isMicMuted) {
+        if (userVol > 0.08) {
+          userStatus.textContent = "Speaking (Audio Sending)...";
+          userStatus.className = "block text-[11px] text-emerald-400 font-medium mt-0.5";
+        } else {
+          userStatus.textContent = "Microphone Live";
+          userStatus.className = "block text-[11px] text-emerald-300/80 mt-0.5";
+        }
+      }
+
       requestAnimationFrame(animateOrbs);
     }
     requestAnimationFrame(animateOrbs);

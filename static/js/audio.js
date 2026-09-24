@@ -222,6 +222,12 @@ export class LiveMicrophoneRecorder {
       await this.audioCtx.resume();
     }
 
+    this.audioCtx.onstatechange = () => {
+      if (this.audioCtx && this.audioCtx.state === "suspended") {
+        this.audioCtx.resume().catch(() => {});
+      }
+    };
+
     this.sourceNode = this.audioCtx.createMediaStreamSource(this.mediaStream);
 
     // 2048 buffer gives ~42ms low latency at 48kHz

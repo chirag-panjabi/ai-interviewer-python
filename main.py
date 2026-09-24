@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import httpx
+import websockets
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Depends, HTTPException, Query
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -252,7 +253,7 @@ async def get_result_data(interview_id: str, db: Session = Depends(get_db)):
 
 
 # ---------------------------------------------------------------------------
-# Full-Duplex WebSockets Live Voice Stage (Google GenAI SDK)
+# Full-Duplex WebSockets Live Voice Stage (Gemini Live Bidi API)
 # ---------------------------------------------------------------------------
 
 @app.websocket("/api/live/{interview_id}")
@@ -296,6 +297,7 @@ async def live_voice_endpoint(websocket: WebSocket, interview_id: str, key: Opti
     )
 
     model_name = os.getenv("GEMINI_LIVE_MODEL", "gemini-3.8-live")
+    ws_url = f"wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key={active_key}"
 
     user_transcript_buffer = []
     assistant_transcript_buffer = []
@@ -316,123 +318,154 @@ async def live_voice_endpoint(websocket: WebSocket, interview_id: str, key: Opti
             db.add(msg)
             db.commit()
 
+    gemini_ws = None
     try:
-        # Initialize Google GenAI SDK Client
-        client = genai.Client(api_key=active_key, http_options={"api_version": "v1beta"})
-        live_config = types.LiveConnectConfig(
-            response_modalities=["AUDIO"],
-            speech_config=types.SpeechConfig(
-                voice_config=types.VoiceConfig(
-                    prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name="Aoede")
-                )
-            ),
-            system_instruction=types.Content(
-                parts=[types.Part.from_text(text=system_prompt)]
-            ),
-        )
+        print(f"[Live Session] Connecting to Gemini Live Bidi WebSocket ({model_name}) for {interview_id}...")
+        gemini_ws = await websockets.connect(ws_url)
 
-        print(f"[Live Session] Connecting to Google GenAI Live ({model_name}) for {interview_id}...")
-        async with client.aio.live.connect(model=model_name, config=live_config) as session:
-            # 1. Notify browser that connection is established
-            await websocket.send_text(json.dumps({"type": "ready", "model": model_name}))
+        # 1. Send initial setup payload with full audio modalitiy and transcriptions
+        setup_payload = {
+            "setup": {
+                "model": f"models/{model_name}",
+                "generationConfig": {
+                    "responseModalities": ["AUDIO"],
+                    "speechConfig": {
+                        "voiceConfig": {
+                            "prebuiltVoiceConfig": {
+                                "voiceName": "Aoede"
+                            }
+                        }
+                    }
+                },
+                "systemInstruction": {
+                    "parts": [{"text": system_prompt}]
+                },
+                "inputAudioTranscription": {},
+                "outputAudioTranscription": {}
+            }
+        }
+        await gemini_ws.send(json.dumps(setup_payload))
 
-            # 2. Trigger initial turn so Alex greets candidate
-            await session.send_client_content(
-                turns=[
-                    types.Content(
-                        role="user",
-                        parts=[types.Part.from_text(text=opening_prompt_text)],
-                    )
-                ],
-                turn_complete=True,
-            )
+        # Await setup acknowledgement
+        raw_setup_resp = await gemini_ws.recv()
+        setup_resp = json.loads(raw_setup_resp)
+        print(f"[Live Session] Setup handshake completed for {interview_id}: {list(setup_resp.keys())}")
 
-            async def client_to_gemini():
-                """Forwards microphone PCM chunks and client events to Gemini Live."""
-                try:
-                    while True:
-                        raw_data = await websocket.receive_text()
-                        event = json.loads(raw_data)
-                        event_type = event.get("type")
+        # 2. Notify browser client that connection is established
+        await websocket.send_text(json.dumps({"type": "ready", "model": model_name}))
 
-                        if event_type == "audio" and "pcm" in event:
-                            raw_bytes = base64.b64decode(event["pcm"])
-                            await session.send_realtime_input(
-                                audio=types.Blob(mime_type="audio/pcm;rate=16000", data=raw_bytes)
-                            )
-                        elif event_type == "ping":
-                            await websocket.send_text(json.dumps({"type": "pong"}))
-                        elif event_type == "end":
-                            break
-                except WebSocketDisconnect:
-                    pass
-                except Exception as e:
-                    print(f"[WebSocket Error client_to_gemini]: {e}")
+        # 3. Send initial greeting turn so Alex speaks first
+        init_greeting_turn = {
+            "clientContent": {
+                "turns": [{
+                    "role": "user",
+                    "parts": [{"text": opening_prompt_text}]
+                }],
+                "turnComplete": True
+            }
+        }
+        await gemini_ws.send(json.dumps(init_greeting_turn))
 
-            async def gemini_to_client():
-                """Forwards Gemini audio, subtitles, and barge-in events to client."""
-                try:
-                    async for response in session.receive():
-                        server_content = response.server_content
-                        if server_content is not None:
-                            # Model audio & text parts
-                            model_turn = server_content.model_turn
-                            if model_turn and model_turn.parts:
-                                for part in model_turn.parts:
-                                    if part.inline_data and part.inline_data.data:
-                                        audio_b64 = base64.b64encode(part.inline_data.data).decode("utf-8")
-                                        await websocket.send_text(json.dumps({
-                                            "type": "audio",
-                                            "pcm": audio_b64,
-                                            "mimeType": "audio/pcm;rate=24000",
-                                        }))
-                                    if part.text:
-                                        assistant_transcript_buffer.append(part.text)
-                                        await websocket.send_text(json.dumps({
-                                            "type": "transcript",
-                                            "role": "assistant",
-                                            "text": part.text,
-                                        }))
+        async def client_to_gemini():
+            """Forwards client microphone PCM chunks and control events to Gemini Live."""
+            try:
+                chunk_counter = 0
+                while True:
+                    raw_data = await websocket.receive_text()
+                    event = json.loads(raw_data)
+                    event_type = event.get("type")
 
-                            # Live transcriptions
-                            if getattr(server_content, "output_transcription", None):
-                                text = server_content.output_transcription.text
-                                if text:
-                                    assistant_transcript_buffer.append(text)
-                                    await websocket.send_text(json.dumps({
-                                        "type": "transcript",
-                                        "role": "assistant",
-                                        "text": text,
-                                    }))
-                                    flush_user_message()
+                    if event_type == "audio" and "pcm" in event:
+                        chunk_counter += 1
+                        if chunk_counter % 50 == 1:
+                            print(f"[Live Session] Streaming candidate mic chunk #{chunk_counter} ({interview_id})")
 
-                            if getattr(server_content, "input_transcription", None):
-                                text = server_content.input_transcription.text
-                                if text:
-                                    user_transcript_buffer.append(text)
-                                    await websocket.send_text(json.dumps({
-                                        "type": "transcript",
-                                        "role": "user",
-                                        "text": text,
-                                    }))
+                        realtime_input = {
+                            "realtimeInput": {
+                                "audio": {
+                                    "mimeType": "audio/pcm;rate=16000",
+                                    "data": event["pcm"]
+                                }
+                            }
+                        }
+                        await gemini_ws.send(json.dumps(realtime_input))
+                    elif event_type == "ping":
+                        await websocket.send_text(json.dumps({"type": "pong"}))
+                    elif event_type == "end":
+                        break
+            except WebSocketDisconnect:
+                pass
+            except Exception as e:
+                print(f"[WebSocket Error client_to_gemini]: {e}")
 
-                            # Barge-in Interruption
-                            if getattr(server_content, "interrupted", False):
-                                assistant_transcript_buffer.clear()
-                                await websocket.send_text(json.dumps({"type": "interrupt"}))
+        async def gemini_to_client():
+            """Continuously forwards Gemini audio, live subtitles, and barge-in events to client."""
+            try:
+                async for raw_msg in gemini_ws:
+                    resp = json.loads(raw_msg)
+                    server_content = resp.get("serverContent")
+                    if not server_content:
+                        continue
 
-                            # Turn Complete
-                            if getattr(server_content, "turn_complete", False):
-                                await websocket.send_text(json.dumps({"type": "turnComplete"}))
-                                flush_assistant_message()
+                    # 1. Model Audio & Text Parts
+                    model_turn = server_content.get("modelTurn")
+                    if model_turn and "parts" in model_turn:
+                        for part in model_turn["parts"]:
+                            if "inlineData" in part and part["inlineData"].get("data"):
+                                await websocket.send_text(json.dumps({
+                                    "type": "audio",
+                                    "pcm": part["inlineData"]["data"],
+                                    "mimeType": part["inlineData"].get("mimeType", "audio/pcm;rate=24000"),
+                                }))
+                            if "text" in part and part["text"]:
+                                assistant_transcript_buffer.append(part["text"])
+                                await websocket.send_text(json.dumps({
+                                    "type": "transcript",
+                                    "role": "assistant",
+                                    "text": part["text"],
+                                }))
 
-                except WebSocketDisconnect:
-                    pass
-                except Exception as e:
-                    print(f"[WebSocket Error gemini_to_client]: {e}")
+                    # 2. Output Transcription (Alex STT Subtitles)
+                    if "outputTranscription" in server_content:
+                        text = server_content["outputTranscription"].get("text", "")
+                        if text:
+                            assistant_transcript_buffer.append(text)
+                            await websocket.send_text(json.dumps({
+                                "type": "transcript",
+                                "role": "assistant",
+                                "text": text,
+                            }))
+                            flush_user_message()
 
-            # Run both streaming tasks concurrently
-            await asyncio.gather(client_to_gemini(), gemini_to_client(), return_exceptions=True)
+                    # 3. Input Audio Transcription (Candidate STT Subtitles)
+                    if "inputTranscription" in server_content:
+                        text = server_content["inputTranscription"].get("text", "")
+                        if text:
+                            user_transcript_buffer.append(text)
+                            await websocket.send_text(json.dumps({
+                                "type": "transcript",
+                                "role": "user",
+                                "text": text,
+                            }))
+
+                    # 4. Barge-in / Interruption
+                    if server_content.get("interrupted"):
+                        print(f"[Live Session] Barge-in interruption detected ({interview_id})")
+                        assistant_transcript_buffer.clear()
+                        await websocket.send_text(json.dumps({"type": "interrupt"}))
+
+                    # 5. Turn Complete
+                    if server_content.get("turnComplete"):
+                        await websocket.send_text(json.dumps({"type": "turnComplete"}))
+                        flush_assistant_message()
+
+            except WebSocketDisconnect:
+                pass
+            except Exception as e:
+                print(f"[WebSocket Error gemini_to_client]: {e}")
+
+        # Run both streaming directions concurrently across turns
+        await asyncio.gather(client_to_gemini(), gemini_to_client(), return_exceptions=True)
 
     except Exception as e:
         print(f"[WebSocket Session Fatal]: {e}")
@@ -444,6 +477,11 @@ async def live_voice_endpoint(websocket: WebSocket, interview_id: str, key: Opti
         flush_user_message()
         flush_assistant_message()
         db.close()
+        if gemini_ws:
+            try:
+                await gemini_ws.close()
+            except Exception:
+                pass
         try:
             await websocket.close()
         except Exception:
